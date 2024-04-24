@@ -1,0 +1,11 @@
+<label class="flex cursor-pointer items-center">
+  <div class="relative">
+    <input type="checkbox" class="peer hidden" [(ngModel)]="checked" />
+    <div class="h-4 w-10 rounded-full bg-gray-400 shadow-inner transition-all peer-checked:bg-pink-600"></div>
+    <div class="absolute -inset-y-1/4 left-0 size-6 rounded-full bg-white shadow transition-all peer-checked:translate-x-full"></div>
+  </div>
+  <div class="ml-3 font-medium text-gray-800 dark:text-gray-100">
+    <ng-content/>
+    {{checked() ? 'On' : 'Off'}}
+  </div>
+</label>

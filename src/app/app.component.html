@@ -1,4 +1,6 @@
-<div class="flex h-full flex-col">
+<div class="flex h-screen flex-col dark:bg-gray-900 dark:text-white">
   <app-navbar/>
-  <router-outlet/>
+  <div class="flex-1 overflow-y-auto">
+    <router-outlet/>
+  </div>
 </div>

@@ -1,0 +1,116 @@
+<div class="flex flex-col gap-2 p-4">
+  <h1 class="text-2xl">
+    This component is used to test if reading a signal multiple times in the same template has the same performance penalty
+    as subscribing to an Observable multiple times does.
+  </h1>
+  <div class="flex gap-2">
+    <button class="rounded bg-pink-200 px-4 py-2 text-xl font-bold hover:bg-white hover:text-pink-600 dark:bg-pink-950" (click)="testCurrent()">
+      Test current
+    </button>
+    <button class="rounded bg-pink-200 px-4 py-2 text-xl font-bold hover:bg-white hover:text-pink-600 dark:bg-pink-950" (click)="testAll()">
+      Test All (avg. over 10 runs)
+    </button>
+  </div>
+  <app-toggle [(checked)]="useRxjs">
+    Use RxJS
+  </app-toggle>
+  <app-toggle [(checked)]="useIf">
+    Use if to read value once only
+  </app-toggle>
+  <p class="font-bold">Results</p>
+  <pre>{{ timeToUpdate() }}</pre>
+
+  @if (!useRxjs()) {
+    @if (useIf()) {
+      @for (data of testData(); track data; let index = $index) {
+        @if (testDataComputed(); as data) {
+          <div class="flex gap-2">
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+          </div>
+        }
+      }
+    } @else {
+      @for (data of testData(); track data; let index = $index) {
+        <div class="flex gap-2">
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+          <p>{{testDataComputed()[index]}}</p>
+        </div>
+      }
+    }
+  } @else {
+    @if (useIf()) {
+      @for (data of testData$ | async; track data; let index = $index) {
+        @if (testDataComputed$ | async; as data) {
+          <div class="flex gap-2">
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+            <p>{{data[index]}}</p>
+          </div>
+        }
+      }
+    } @else {
+      @for (data of testData$ | async; track data; let index = $index) {
+        <div class="flex gap-2">
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+          <p>{{(testDataComputed$ | async)![index]}}</p>
+        </div>
+      }
+    }
+  }
+</div>
