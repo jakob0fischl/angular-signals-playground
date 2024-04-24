@@ -5,19 +5,19 @@ import {AsyncPipe} from '@angular/common';
 import {map, shareReplay} from 'rxjs';
 
 @Component({
-  selector: 'app-multiple-signal-reads',
+  selector: 'app-signals-vs-rxjs-performance',
   standalone: true,
   imports: [
     ToggleComponent,
     AsyncPipe,
   ],
-  templateUrl: './multiple-signal-reads.component.html',
+  templateUrl: './signal-vs-rxjs-performance.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'block flex-1',
   },
 })
-export class MultipleSignalReadsComponent {
+export class SignalVsRxjsPerformanceComponent {
   protected readonly timeToUpdate = signal<string | undefined>(undefined);
   protected readonly useRxjs = signal(false);
   protected readonly useIf = signal(false);

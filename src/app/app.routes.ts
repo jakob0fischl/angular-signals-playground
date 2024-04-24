@@ -2,9 +2,9 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
-    path: 'multiple-signal-reads',
+    path: 'signals-vs-rxjs-performance',
     loadComponent:
-      () => import('../components/multiple-signal-reads/multiple-signal-reads.component')
-        .then(i => i.MultipleSignalReadsComponent)
+      () => import('../components/signals-vs-rxjs-performance/signal-vs-rxjs-performance.component')
+        .then(i => i.SignalVsRxjsPerformanceComponent)
   }
 ];
