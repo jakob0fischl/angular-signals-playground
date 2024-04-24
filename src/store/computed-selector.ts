@@ -1,6 +1,7 @@
 import {
   assertInInjectionContext,
   assertNotInReactiveContext,
+  computed,
   CreateSignalOptions,
   effect,
   EnvironmentInjector,
@@ -10,24 +11,21 @@ import {
   runInInjectionContext,
   signal,
   Signal,
-  WritableSignal,
 } from '@angular/core';
 
-export class Selector<TSelected, TStore> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- any is needed to prevent passing non-signal values
+export type SignalInputs = Record<keyof any, NoInfer<Signal<unknown>>>;
 
-  private unsub: (() => void) | undefined;
-  private currentState: WritableSignal<TSelected> | undefined;
-  private listenerCount = 0;
-
+export class ComputedSelector<TSelected, TStore, TInputs extends SignalInputs> {
   public constructor(
-    private readonly selector: (state: TStore) => TSelected,
+    private readonly selector: (state: TStore, inputs: TInputs) => TSelected,
     private readonly getStoreState: () => TStore,
     private readonly subscribeToStore: (listener: () => void) => () => void,
     private readonly options: CreateSignalOptions<TSelected>,
-  ) {
-  }
+  ) {}
 
   public inject(
+    inputs: TInputs,
     options: { injector?: Injector } = {},
   ): Signal<TSelected> {
     let injector = options.injector;
@@ -38,61 +36,44 @@ export class Selector<TSelected, TStore> {
 
     if (isDevMode() && injector instanceof EnvironmentInjector) {
       console.warn(
-        'Selector.inject should not be used in an EnvironmentInjector ' +
+        'ComputedSelector.inject should not be used in an EnvironmentInjector ' +
         'as that is very likely to lead to a permanent subscriptions, selectors should only be injected in components',
       );
     }
 
-    // Outside effect to immediately cache the initial value before an update cycle
-    this.start();
+    /**
+     * There's no point in caching anything here as we are almost always going to get different inputs anyway
+     */
+    const state = signal(this.getStoreState());
+
+    const unsub = this.subscribeToStore(() => {
+      state.set(this.getStoreState());
+    });
 
     runInInjectionContext(injector, () => {
       effect((onCleanup) => {
         onCleanup(() => {
-          this.stop();
+          unsub();
         });
       });
     });
 
     // This must be non-null as start must set it when it is called
-    return this.currentState!.asReadonly();
+    return computed(() => {
+      return this.selector(state(), inputs);
+    }, this.options);
   }
 
-  public get(): TSelected {
+  public get(inputs: TInputs): TSelected {
     assertNotInReactiveContext(
       this.get,
       'You are trying to access the store in a reactive context, but you are not using a signal. ' +
       'This is likely a mistake, use the `inject` method to create a signal and access the store in a reactively with that signal.',
     );
-    if (this.currentState != null) {
-      return this.currentState();
-    } else {
-      return this.selector(this.getStoreState());
-    }
-  }
 
-  private start(): void {
-    this.listenerCount++;
-    if (this.unsub != null)
-      return;
-
-    const slice = signal(
-      this.selector(this.getStoreState()),
-      {equal: this.options.equal},
-    );
-    this.currentState = slice;
-
-    this.unsub = this.subscribeToStore(() => {
-      slice.set(this.selector(this.getStoreState()));
-    });
-  }
-
-  private stop(): void {
-    this.listenerCount--;
-    if (this.listenerCount === 0 && this.unsub != null) {
-      this.unsub();
-      this.currentState = undefined;
-      this.unsub = undefined;
-    }
+    /**
+     * There's no point in caching anything here as we are almost always going to get different inputs anyway
+     */
+    return this.selector(this.getStoreState(), inputs);
   }
 }

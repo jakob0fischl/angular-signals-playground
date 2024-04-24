@@ -3,9 +3,8 @@
  */
 import {CreateSignalOptions} from '@angular/core';
 import {Draft, enableMapSet, produce} from 'immer';
-import {Producer} from 'immer/src/types/types-external';
-import {shallow} from './util';
 import {Selector} from './selector';
+import {ComputedSelector, SignalInputs} from './computed-selector';
 
 enableMapSet();
 
@@ -14,7 +13,7 @@ type Listener = () => void;
 export abstract class Store<TState> {
   private readonly _listeners = new Set<Listener>();
   private _state: TState;
-  private _flushing = 0;
+  private _isFlushing = false;
 
   protected constructor(initialState: TState) {
     this._state = initialState;
@@ -22,9 +21,21 @@ export abstract class Store<TState> {
 
   protected createSelector<TSelected>(
     selector: (state: NoInfer<TState>) => TSelected,
-    options: CreateSignalOptions<TSelected> = { equal: shallow },
+    options: CreateSignalOptions<TSelected> = {},
   ): Selector<TSelected, TState> {
     return new Selector<TSelected, TState>(
+      selector,
+      this.getState,
+      this.subscribe,
+      options,
+    );
+  }
+
+  protected createComputedSelector<TSelected, TInputs extends SignalInputs>(
+    selector: (state: NoInfer<TState>, inputs: TInputs) => TSelected,
+    options: CreateSignalOptions<TSelected> = {},
+  ): ComputedSelector<TSelected, TState, TInputs> {
+    return new ComputedSelector<TSelected, TState, TInputs>(
       selector,
       this.getState,
       this.subscribe,
@@ -40,19 +51,25 @@ export abstract class Store<TState> {
   };
   private readonly getState = () => this._state;
 
-  public update(updater: Producer<Draft<TState>>): void {
-    const previous = this._state;
-    this._state = produce(previous, updater as unknown as Parameters<typeof produce>[1]);
+  public update(
+    // This should be Producer from immer/src/types/types-external, but importing that pulls in node.js code
+    updater: (draft: Draft<TState>) => Draft<TState> | void | undefined
+  ): void {
+    this._state = produce(this._state, updater as unknown as Parameters<typeof produce>[1]);
     this.flush();
   }
 
   private flush(): void {
-    // In case a flush triggers another flush
-    const flushId = ++this._flushing;
-    for (const listener of this._listeners) {
-      if (this._flushing !== flushId)
-        return;
-      listener();
+    if (this._isFlushing) {
+      throw new Error('Flush triggered another flush, this should not happen');
+    }
+    this._isFlushing = true;
+    try {
+      for (const listener of this._listeners) {
+        listener();
+      }
+    } finally {
+      this._isFlushing = false;
     }
   }
 }
