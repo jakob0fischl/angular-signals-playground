@@ -19,7 +19,6 @@ export class ComputedSelector<TSelected, TState, TInputs extends SignalInputs> {
     }, this.options);
   }
 
-  // TODO tests
   public get(inputs: TInputs): TSelected {
     assertNotInReactiveContext(
       this.get,
