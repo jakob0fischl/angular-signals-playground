@@ -3,26 +3,23 @@ import {
   assertNotInReactiveContext,
   CreateSignalOptions,
   effect,
-  EnvironmentInjector,
+  EffectRef,
   inject,
   Injector,
-  isDevMode,
-  runInInjectionContext,
   signal,
   Signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
 
-export class Selector<TSelected, TStore> {
-
-  private unsub: (() => void) | undefined;
+export class Selector<TSelected, TState> {
+  private unsub: EffectRef | undefined;
   private currentState: WritableSignal<TSelected> | undefined;
   private listenerCount = 0;
 
   public constructor(
-    private readonly selector: (state: TStore) => TSelected,
-    private readonly getStoreState: () => TStore,
-    private readonly subscribeToStore: (listener: () => void) => () => void,
+    private readonly selector: (state: TState) => TSelected,
+    private readonly storeState: Signal<TState>,
     private readonly options: CreateSignalOptions<TSelected>,
   ) {
   }
@@ -36,28 +33,18 @@ export class Selector<TSelected, TStore> {
       injector = inject(Injector);
     }
 
-    if (isDevMode() && injector instanceof EnvironmentInjector) {
-      console.warn(
-        'Selector.inject should not be used in an EnvironmentInjector ' +
-        'as that is very likely to lead to a permanent subscriptions, selectors should only be injected in components',
-      );
-    }
+    const result = this.start(injector);
 
-    // Outside effect to immediately cache the initial value before an update cycle
-    this.start();
-
-    runInInjectionContext(injector, () => {
-      effect((onCleanup) => {
-        onCleanup(() => {
-          this.stop();
-        });
+    effect((onCleanup) => {
+      onCleanup(() => {
+        this.stop();
       });
-    });
+    }, { injector });
 
-    // This must be non-null as start must set it when it is called
-    return this.currentState!.asReadonly();
+    return result.asReadonly();
   }
 
+  // TODO tests
   public get(): TSelected {
     assertNotInReactiveContext(
       this.get,
@@ -65,32 +52,45 @@ export class Selector<TSelected, TStore> {
       'This is likely a mistake, use the `inject` method to create a signal and access the store in a reactively with that signal.',
     );
     if (this.currentState != null) {
-      return this.currentState();
+      return untracked(this.currentState);
     } else {
-      return this.selector(this.getStoreState());
+      return this.selector(untracked(this.storeState));
     }
   }
 
-  private start(): void {
+  private start(injector: Injector): WritableSignal<TSelected> {
     this.listenerCount++;
-    if (this.unsub != null)
-      return;
+    if (this.currentState != null)
+      return this.currentState;
 
     const slice = signal(
-      this.selector(this.getStoreState()),
+      this.selector(untracked(this.storeState)),
       {equal: this.options.equal},
     );
     this.currentState = slice;
 
-    this.unsub = this.subscribeToStore(() => {
-      slice.set(this.selector(this.getStoreState()));
+    let first = true;
+    this.unsub = effect(() => {
+      if (first) {
+        first = false;
+        // read it to make the effect depend on it
+        this.storeState();
+      } else {
+        slice.set(this.selector(this.storeState()));
+      }
+    }, {
+      injector,
+      allowSignalWrites: true,
+      manualCleanup: true,
     });
+
+    return this.currentState;
   }
 
   private stop(): void {
     this.listenerCount--;
-    if (this.listenerCount === 0 && this.unsub != null) {
-      this.unsub();
+    if (this.listenerCount === 0) {
+      this.unsub?.destroy();
       this.currentState = undefined;
       this.unsub = undefined;
     }

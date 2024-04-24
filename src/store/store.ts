@@ -1,22 +1,18 @@
 /**
  * Inspired by https://github.com/tanstack/store but tightly integrated with immerjs and Angular rather than platform independent
  */
-import {CreateSignalOptions} from '@angular/core';
+import {CreateSignalOptions, signal, untracked, WritableSignal} from '@angular/core';
 import {Draft, enableMapSet, produce} from 'immer';
 import {Selector} from './selector';
 import {ComputedSelector, SignalInputs} from './computed-selector';
 
 enableMapSet();
 
-type Listener = () => void;
-
 export abstract class Store<TState> {
-  private readonly _listeners = new Set<Listener>();
-  private _state: TState;
-  private _isFlushing = false;
+  private readonly _state: WritableSignal<TState>;
 
   protected constructor(initialState: TState) {
-    this._state = initialState;
+    this._state = signal(initialState);
   }
 
   protected createSelector<TSelected>(
@@ -25,8 +21,7 @@ export abstract class Store<TState> {
   ): Selector<TSelected, TState> {
     return new Selector<TSelected, TState>(
       selector,
-      this.getState,
-      this.subscribe,
+      this._state,
       options,
     );
   }
@@ -37,40 +32,21 @@ export abstract class Store<TState> {
   ): ComputedSelector<TSelected, TState, TInputs> {
     return new ComputedSelector<TSelected, TState, TInputs>(
       selector,
-      this.getState,
-      this.subscribe,
+      this._state,
       options,
     );
   }
-
-  private readonly subscribe = (listener: Listener): () => void => {
-    this._listeners.add(listener);
-    return () => {
-      this._listeners.delete(listener);
-    };
-  };
-  private readonly getState = () => this._state;
 
   public update(
     // This should be Producer from immer/src/types/types-external, but importing that pulls in node.js code
     updater: (draft: Draft<TState>) => Draft<TState> | void | undefined
   ): void {
-    this._state = produce(this._state, updater as unknown as Parameters<typeof produce>[1]);
-    this.flush();
-  }
-
-  private flush(): void {
-    if (this._isFlushing) {
-      throw new Error('Flush triggered another flush, this should not happen');
-    }
-    this._isFlushing = true;
-    try {
-      for (const listener of this._listeners) {
-        listener();
-      }
-    } finally {
-      this._isFlushing = false;
-    }
+    this._state.set(
+      produce(
+        untracked(this._state),
+        updater as unknown as Parameters<typeof produce>[1],
+      )
+    );
   }
 }
 

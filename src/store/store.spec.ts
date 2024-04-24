@@ -67,6 +67,7 @@ describe('Store', () => {
         store.update(() => 2);
         TestBed.flushEffects();
       });
+      expect(store.selectorFn).toHaveBeenCalledTimes(3);
 
       TestBed.resetTestingModule();
 
