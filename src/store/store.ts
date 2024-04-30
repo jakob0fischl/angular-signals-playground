@@ -1,5 +1,5 @@
 import {Signal, signal, untracked, WritableSignal} from '@angular/core';
-import {Draft, enableMapSet, produce} from 'immer';
+import {enableMapSet, produce, Producer} from 'immer';
 
 enableMapSet();
 
@@ -13,8 +13,7 @@ export abstract class Store<TState> {
   }
 
   public update(
-    // This should be Producer from immer/src/types/types-external, but importing that pulls in node.js code
-    updater: (draft: Draft<TState>) => Draft<TState> | void | undefined
+    updater: Producer<TState>,
   ): void {
     this._state.set(
       produce(
